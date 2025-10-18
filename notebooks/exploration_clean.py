@@ -241,6 +241,13 @@ desc_df = enzy_data["mol"].apply(mol_descriptors).add_prefix("desc_")
 fps = np.vstack(enzy_data["mol"].apply(mol_fingerprint))
 fp_df = pd.DataFrame(fps, columns=[f"fp_{i}" for i in range(fps.shape[1])])
 
+# add log scaling for MW, TFSA due to right skew
+desc_df["desc_log_MW"] = np.log10(desc_df["desc_MW"])
+desc_df["desc_log_TPSA"] = np.log1p(desc_df["desc_TPSA"])
+
+# drop original mol column
+desc_df = desc_df.drop(columns=["desc_MW", "desc_TPSA",])
+
 enzy_data = pd.concat([enzy_data.reset_index(drop=True), desc_df.reset_index(drop=True), fp_df], axis=1)
 
 # ======================================================
@@ -273,6 +280,7 @@ def reduce_fps(df: pd.DataFrame, fp_cols: list, var_thr=0.01, use_pca=False, pca
     print(f"[FP variance] {len(fp_cols)} → keep {Xr.shape[1]} (thr={var_thr})")
     pca_model, names = None, kept_cols
     if use_pca and Xr.shape[1] > 0:
+        print(f"[FP PCA] applying PCA to reduce to {pca_n} components")
         pca_model = PCA(n_components=min(pca_n, Xr.shape[1]), random_state=rs)
         Xr = pca_model.fit_transform(Xr)
         names = [f"fp_pca_{i}" for i in range(Xr.shape[1])]
@@ -297,6 +305,7 @@ def prepare_features(df_in: pd.DataFrame):
         "imputer": cont_imp, "scaler": cont_scaler,
         "fp_var_selector": fp_steps["vt"], "fp_pca": fp_steps["pca"], "fp_mask": fp_steps.get("mask"),
     }
+    print(f"[Final features] fp_pca: {meta['fp_pca'] is not None}")
     print(f"[Final features] X shape: {X.shape}")
     return X, y, meta
 
@@ -315,21 +324,32 @@ def plot_corr_heatmap(df, cols, title, fname, sample_max=5000):
 
 def plot_pca_explained_variance(pca_model, fname="fp_pca_explained_variance.png"):
     """
-    Scree plot for PCA on fingerprints.
+    Scree plot for PCA on fingerprints with legend and 95% variance threshold line.
     """
     if pca_model is None:
         return
+
     evr = pca_model.explained_variance_ratio_
     cum = np.cumsum(evr)
-    plt.figure(figsize=(6,4))
-    plt.plot(range(1, len(evr)+1), evr, marker="o")
-    plt.plot(range(1, len(evr)+1), cum, marker=".")
+
+    plt.figure(figsize=(6, 4))
+    plt.plot(range(1, len(evr)+1), evr, marker="o", label="Per-component variance")
+    plt.plot(range(1, len(evr)+1), cum, marker=".", label="Cumulative variance")
+
+    # Add horizontal line at 0.95 cumulative explained variance
+    plt.axhline(y=0.95, color="red", linestyle="--", linewidth=1, label="95% variance threshold")
+
     plt.xlabel("PCA component")
     plt.ylabel("Explained variance (ratio)")
     plt.title("FP PCA: explained variance (per-comp and cumulative)")
+    plt.legend()
     plt.tight_layout()
+
     out = os.path.join(FIG_DIR, fname)
-    plt.savefig(out, dpi=200); plt.close(); print(f"[saved] {out}")
+    plt.savefig(out, dpi=200)
+    plt.close()
+    print(f"[saved] {out}")
+
 
 def plot_fp_variance_and_kept(fps_df, kept_mask, title_prefix="FP",
                               var_threshold=0.01, fname_prefix="fp"):
