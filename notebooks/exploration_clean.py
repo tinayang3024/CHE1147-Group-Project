@@ -57,6 +57,9 @@ enzy_data = enzy_data.dropna(subset=["kcat_value", "km_value"]).reset_index(drop
 # Drop columns with >50% missing (simple, defensible rule)
 missing_ratio = enzy_data.isnull().mean()
 enzy_data = enzy_data.drop(columns=missing_ratio[missing_ratio > 0.5].index)
+#Drop "Similariity" over 60%
+enzy_data = enzy_data[(enzy_data["max_enzyme_similarity"].isna()) | (enzy_data["max_enzyme_similarity"] >= 60)]
+enzy_data = enzy_data[(enzy_data["max_organism_similarity"].isna()) | (enzy_data["max_organism_similarity"] >= 60)]
 
 # ======================================================
 # 2) Temperature parsing (to °C) and pH parsing
