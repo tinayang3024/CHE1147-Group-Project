@@ -61,6 +61,8 @@ enzy_data = enzy_data.drop(columns=missing_ratio[missing_ratio > 0.5].index)
 enzy_data = enzy_data[(enzy_data["max_enzyme_similarity"].isna()) | (enzy_data["max_enzyme_similarity"] >= 60)]
 enzy_data = enzy_data[(enzy_data["max_organism_similarity"].isna()) | (enzy_data["max_organism_similarity"] >= 60)]
 
+print("[Data Load & Basic Cleaning] shape:", enzy_data.shape)
+
 # ======================================================
 # 2) Temperature parsing (to °C) and pH parsing
 # ======================================================
@@ -156,7 +158,7 @@ def clean_ph(value):
     ph_counts["unrecognized"] += 1; return np.nan
 
 enzy_data["pH_value"] = enzy_data.get("pH", pd.Series(index=enzy_data.index)).apply(clean_ph)
-
+print("[Temperature (to °C) and pH parsing] shape:", enzy_data.shape)
 # ======================================================
 # 3) Sequence features (ProteinAnalysis) with robust cleaning
 # ======================================================
@@ -206,6 +208,8 @@ def compute_protein_features(seq):
 seq_feats = [compute_protein_features(s) for s in tqdm(enzy_data.get("sequence", pd.Series(index=enzy_data.index)).astype(str), desc="Sequence feats")]
 enzy_data = pd.concat([enzy_data.reset_index(drop=True), pd.DataFrame(seq_feats).reset_index(drop=True)], axis=1)
 
+print("[Sequence feature computation] shape:", enzy_data.shape)
+
 # ======================================================
 # 4) SMILES → RDKit descriptors + Morgan fingerprints
 # ======================================================
@@ -252,6 +256,8 @@ desc_df["desc_log_TPSA"] = np.log1p(desc_df["desc_TPSA"])
 desc_df = desc_df.drop(columns=["desc_MW", "desc_TPSA",])
 
 enzy_data = pd.concat([enzy_data.reset_index(drop=True), desc_df.reset_index(drop=True), fp_df], axis=1)
+
+print("[Molecule descriptors and fingerprints] shape:", enzy_data.shape)
 
 # ======================================================
 # 5) Feature pruning (corr on continuous; variance + PCA on fingerprints)
@@ -311,6 +317,8 @@ def prepare_features(df_in: pd.DataFrame):
     print(f"[Final features] fp_pca: {meta['fp_pca'] is not None}")
     print(f"[Final features] X shape: {X.shape}")
     return X, y, meta
+
+print("[Feature pruning] shape:", enzy_data.shape)
 
 # ======================================================
 # 6) Plots for reporting (pre/post corr; FP variance; PCA scree)
@@ -1181,9 +1189,6 @@ def _log_hist_with_fences(ax, series, title, bounds, removed_mask):
     ax.grid(alpha=0.3)
     ax.legend(lines, labels, fontsize=7, loc="upper right", framealpha=0.9)
 
-# ======================================================
-# 7) Orchestration
-# ======================================================
 
 # --- A) PRE: visualize continuous corrs + FP variance on raw data ---
 cont_cols_pre, fp_cols_pre = split_feature_blocks(enzy_data)
