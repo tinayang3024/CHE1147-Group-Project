@@ -36,7 +36,7 @@ DATA_URL = "https://github.com/ChemBioHTP/EnzyExtract/raw/main/data/export/TheDa
 CORR_THRESHOLD = 0.90        # drop one of a pair if |corr| > 0.90 (continuous only)
 FP_VAR_THRESHOLD = 0.01      # drop fingerprint bits with variance <= 0.01
 USE_PCA_FOR_FP = True        # compress FP after variance filtering
-FP_PCA_N_COMPONENTS = 256
+FP_PCA_N_COMPONENTS = 200
 RANDOM_STATE = 42
 
 TARGET_COLS = ["kcat_km", "kcat_value", "km_value"]  # excluded from feature transforms
