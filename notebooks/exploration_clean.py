@@ -27,6 +27,7 @@ from sklearn.feature_selection import VarianceThreshold
 from sklearn.impute import SimpleImputer
 from functools import reduce
 from typing import Optional
+import umap
 
 # ---------- Config ----------
 FIG_DIR = "./figs"; os.makedirs(FIG_DIR, exist_ok=True)
@@ -894,6 +895,66 @@ def compute_outlier_masks_with_meta(df: pd.DataFrame, fence=1.5, contamination=0
 
 
 # ========= 2) Visualization helpers =========
+
+def plot_umap_fingerprints(enzy_data: pd.DataFrame, label_col: str = None, n_neighbors: int = 15, min_dist: float = 0.1, fname: str = "umap_fingerprints.png"):
+    """
+    Visualize RDKit fingerprints (fp_* columns) in 2D using UMAP with Jaccard distance.
+    
+    Parameters
+    ----------
+    enzy_data : pd.DataFrame
+        DataFrame containing fingerprint columns prefixed with 'fp_'.
+    label_col : str, optional
+        Column name in enzy_data to color points by (e.g., enzyme type, substrate, cluster).
+        If None, all points are plotted in one color.
+    n_neighbors : int
+        UMAP parameter controlling local vs global structure balance.
+    min_dist : float
+        UMAP parameter controlling how tightly points cluster.
+    """
+
+    # 1️⃣ Extract fingerprint columns
+    fp_cols = [c for c in enzy_data.columns if c.startswith("fp_")]
+    X_fp = enzy_data[fp_cols].astype(np.uint8).values  # ensure binary int type
+
+    # 2️⃣ Run UMAP (Jaccard metric for binary data)
+    reducer = umap.UMAP(
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+        metric="jaccard",
+        random_state=42
+    )
+    embedding = reducer.fit_transform(X_fp)
+
+    # 3️⃣ Build plot DataFrame
+    plot_df = pd.DataFrame(embedding, columns=["UMAP_1", "UMAP_2"])
+    if label_col and label_col in enzy_data.columns:
+        plot_df[label_col] = enzy_data[label_col]
+
+    # 4️⃣ Plot
+    plt.figure(figsize=(8, 6))
+    if label_col and label_col in plot_df:
+        scatter = plt.scatter(
+            plot_df["UMAP_1"],
+            plot_df["UMAP_2"],
+            c=pd.Categorical(plot_df[label_col]).codes,
+            cmap="Spectral",
+            s=4,
+            alpha=0.7
+        )
+        plt.colorbar(scatter, label=label_col)
+    else:
+        plt.scatter(plot_df["UMAP_1"], plot_df["UMAP_2"], s=3, alpha=0.6, color="steelblue")
+    
+    plt.title("UMAP projection of Morgan fingerprints (Jaccard metric)")
+    plt.xlabel("UMAP 1")
+    plt.ylabel("UMAP 2")
+    plt.tight_layout()
+
+    out = os.path.join(FIG_DIR, fname)
+    plt.savefig(out, dpi=200)
+    plt.close()
+
 def _log_hist_with_fences(ax, series, title, bounds, removed_mask):
     """
     Plot log10 histogram with IQR fences + vertical lines at min and max values.
@@ -1268,8 +1329,7 @@ plot_outlier_histograms(enzy_data_clean, masks_post, meta_post, fname_prefix="ou
 plot_kcat_km_scatter_with_outliers(enzy_data_clean, masks_post, fname="scatter_kcat_km_outliers_post.png")
 plot_iso_score_hist(meta_post, masks_post, fname="iso_scores_post.png")
 plot_outliers_pie(masks_post, fname="outliers_pie_post.png")
-
-
+plot_umap_fingerprints(enzy_data_clean)
 
 
 print("\n=== Done ===")
