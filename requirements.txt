@@ -1,0 +1,27 @@
+# Core scientific stack
+numpy
+pandas
+scipy
+pyarrow
+requests
+tqdm
+
+# Machine learning
+scikit-learn
+xgboost
+lightgbm
+
+# Chemistry / bioinformatics
+rdkit-pypi
+biopython
+
+# Visualization
+matplotlib
+seaborn
+
+# Utilities
+joblib
+pyyaml
+
+# Optional extras
+umap-learn
