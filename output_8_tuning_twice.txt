@@ -1,0 +1,27 @@
+=== Loading cleaned dataset ===
+[IO] loaded DataFrame ← /Users/yang/Documents/grad/che1147/CHE1147-Group-Project/data/processed/enzyme_clean.parquet shape=(162850, 379)
+[Feature prep] X shape=(162850, 332), targets=['kcat_value', 'km_value']
+
+=== Tuning & Training: kcat_value ===
+[kcat_value] Running parameter search...
+Fitting 3 folds for each of 15 candidates, totalling 45 fits
+[kcat_value] Best params: {'colsample_bytree': 0.8, 'learning_rate': 0.04, 'max_depth': 20, 'min_child_weight': 1, 'n_estimators': 1000, 'reg_lambda': 10.079026195497082, 'subsample': 0.6}
+
+[kcat_value] Tuned Model (log space):
+MAE: 0.6805 | RMSE: 1.0525 | R²: 0.6252
+[Saved model] → models/xgb_kcat_value_tuned.joblib
+
+=== Tuning & Training: km_value ===
+[km_value] Running parameter search...
+Fitting 3 folds for each of 15 candidates, totalling 45 fits
+[km_value] Best params: {'colsample_bytree': 0.8, 'learning_rate': 0.04, 'max_depth': 20, 'min_child_weight': 1, 'n_estimators': 1000, 'reg_lambda': 10.079026195497082, 'subsample': 0.6}
+
+[km_value] Tuned Model (log space):
+MAE: 0.5498 | RMSE: 0.8478 | R²: 0.6683
+[Saved model] → models/xgb_km_value_tuned.joblib
+
+=== Training Summary (log space) ===
+kcat_value: MAE=0.6805, RMSE=1.0525, R²=0.6252
+  → Best Params: {'colsample_bytree': 0.8, 'learning_rate': 0.04, 'max_depth': 20, 'min_child_weight': 1, 'n_estimators': 1000, 'reg_lambda': 10.079026195497082, 'subsample': 0.6}
+km_value: MAE=0.5498, RMSE=0.8478, R²=0.6683
+  → Best Params: {'colsample_bytree': 0.8, 'learning_rate': 0.04, 'max_depth': 20, 'min_child_weight': 1, 'n_estimators': 1000, 'reg_lambda': 10.079026195497082, 'subsample': 0.6}

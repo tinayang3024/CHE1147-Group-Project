@@ -5,7 +5,8 @@ from rdkit.Chem import Descriptors, DataStructs, rdFingerprintGenerator
 
 RDLogger.DisableLog("rdApp.*")
 
-FP_SIZE = 2048
+FP_SIZE = 256
+# FP_SIZE = 2048
 morgan_gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=FP_SIZE)
 
 
@@ -28,6 +29,15 @@ def mol_descriptors(mol):
                 "desc_RotBonds": np.nan,
                 "desc_AromaticRingCount": np.nan,
                 "desc_RingCount": np.nan,
+                "desc_NumHeavyAtoms": np.nan,
+                "desc_ExactMolWt": np.nan,
+                "desc_FractionCSP3": np.nan,
+                "desc_CalcNumAliphaticRings": np.nan,
+                "desc_CalcNumSaturatedRings": np.nan,
+                "desc_CalcNumHeteroatoms": np.nan,
+                "desc_CalcNumAromaticHeterocycles": np.nan,
+                "desc_FindMolChiralCenters": np.nan,
+                "desc_polarizability": np.nan,
             }
         )
     return pd.Series(
@@ -40,6 +50,15 @@ def mol_descriptors(mol):
             "desc_RotBonds": Descriptors.NumRotatableBonds(mol),
             "desc_AromaticRingCount": Descriptors.NumAromaticRings(mol),
             "desc_RingCount": Descriptors.RingCount(mol),
+            "desc_NumHeavyAtoms": Descriptors.HeavyAtomCount(mol),
+            "desc_ExactMolWt": Descriptors.ExactMolWt(mol),
+            "desc_FractionCSP3": Descriptors.FractionCSP3(mol),
+            "desc_CalcNumAliphaticRings": Descriptors.NumAliphaticRings(mol),
+            "desc_CalcNumSaturatedRings": Descriptors.NumSaturatedRings(mol),
+            "desc_CalcNumHeteroatoms": Descriptors.NumHeteroatoms(mol),
+            "desc_CalcNumAromaticHeterocycles": Descriptors.NumAromaticHeterocycles(mol),
+            "desc_FindMolChiralCenters": len(Chem.FindMolChiralCenters(mol, includeUnassigned=True)),
+            "desc_polarizability": Descriptors.MolMR(mol),
         }
     )
 
@@ -58,11 +77,12 @@ def add_smiles_features(df: pd.DataFrame) -> pd.DataFrame:
     df["mol"] = df.get("smiles", pd.Series(index=df.index)).apply(smiles_to_mol)
 
     desc_df = df["mol"].apply(mol_descriptors)
-    # log-scaling only for heavy-tailed ones
-    desc_df["desc_log_MW"] = np.log10(desc_df["desc_MW"])
-    desc_df["desc_log_TPSA"] = np.log1p(desc_df["desc_TPSA"])
-    # drop original skewed cols, keep log ones
-    desc_df = desc_df.drop(columns=["desc_MW", "desc_TPSA"])
+    # not applying log-scaling for now as models can handle raw values
+    # # log-scaling only for heavy-tailed ones
+    # desc_df["desc_log_MW"] = np.log10(desc_df["desc_MW"])
+    # desc_df["desc_log_TPSA"] = np.log1p(desc_df["desc_TPSA"])
+    # # drop original skewed cols, keep log ones
+    # desc_df = desc_df.drop(columns=["desc_MW", "desc_TPSA"])
 
     fps = np.vstack(df["mol"].apply(mol_fingerprint))
     fp_df = pd.DataFrame(fps, columns=[f"fp_{i}" for i in range(fps.shape[1])])

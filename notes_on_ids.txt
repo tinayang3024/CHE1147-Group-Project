@@ -1,0 +1,21 @@
+brenda_id lengths stats:
+ count    162850.000000
+mean          0.551176
+std           0.497376
+min           0.000000
+25%           0.000000
+50%           1.000000
+75%           1.000000
+max           1.000000
+Name: brenda_id, dtype: float64
+cid lengths stats:
+ count    162850.000000
+mean          0.944955
+std           1.465025
+min           0.000000
+25%           0.000000
+50%           1.000000
+75%           1.000000
+max          23.000000
+Name: cid, dtype: float64
+(chem1147) ~/Documents/grad/che
