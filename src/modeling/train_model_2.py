@@ -9,6 +9,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from scipy.stats import loguniform
 import joblib
 from src.utils.io_utils import load_parquet
+from src.config import DROP_MISSING_THRESHOLD
 
 OUTPUT_DIR = "models"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -60,15 +61,27 @@ def tune_and_train(X, y, target_name, random_state=42):
     # }
     
     # log 9
+    # param_grid = {
+    #     "n_estimators": [800, 1000, 1200],
+    #     "learning_rate": [0.02, 0.03, 0.04],
+    #     "max_depth": [18, 20, 22],
+    #     "subsample": [0.55, 0.6, 0.65],
+    #     "colsample_bytree": [0.6, 0.7, 0.8],
+    #     "reg_lambda": loguniform(0.001, 0.1, 10),
+    #     "min_child_weight": [1],
+    # }
+
+    # log 10
     param_grid = {
-        "n_estimators": [800, 1000, 1200],
-        "learning_rate": [0.02, 0.03, 0.04],
-        "max_depth": [18, 20, 22],
-        "subsample": [0.55, 0.6, 0.65],
-        "colsample_bytree": [0.6, 0.7, 0.8],
+        "n_estimators": [1000],
+        "learning_rate": [0.04],
+        "max_depth": [20],
+        "subsample": [0.6],
+        "colsample_bytree": [0.8],
         "reg_lambda": loguniform(0.001, 0.1, 10),
         "min_child_weight": [1],
     }
+
     
     # param_grid = {
     #     "n_estimators": [700, 1000, 1500],
@@ -135,13 +148,15 @@ def main():
 
     # drop columns with too many missing values
     missing_ratio = df.isnull().mean()
-    df = df.drop(columns=missing_ratio[missing_ratio > 0.5].index)
+    df = df.drop(columns=missing_ratio[missing_ratio > DROP_MISSING_THRESHOLD].index)
 
     X, targets = prepare_features_from_df(df)
 
     # print("X feature names:", X.columns.tolist())
     # print("X shape:", X.shape)
-    print("df feature names:", df.columns.tolist())
+    # print("df feature names:", df.columns.tolist())
+
+    # print("enzyme_ec examples:", df['enzyme_ec'].head().tolist())
 
     # print("brenda_id examples:", df['brenda_id'].head(50).tolist())
     # print("cid examples:", df['cid'].head().tolist())
@@ -156,15 +171,15 @@ def main():
     # print("df cid types:\n", df['cid'].dtype)
     # print("df brenda_id types:\n", df['brenda_id'].dtype)
 
-    # results = {}
-    # for target_name, y in targets.items():
-    #     print(f"\n=== Tuning & Training: {target_name} ===")
-    #     results[target_name] = tune_and_train(X, y, target_name)
+    results = {}
+    for target_name, y in targets.items():
+        print(f"\n=== Tuning & Training: {target_name} ===")
+        results[target_name] = tune_and_train(X, y, target_name)
 
-    # print("\n=== Training Summary (log space) ===")
-    # for k, v in results.items():
-    #     print(f"{k}: MAE={v['mae']:.4f}, RMSE={v['rmse']:.4f}, R²={v['r2']:.4f}")
-    #     print(f"  → Best Params: {v['best_params']}")
+    print("\n=== Training Summary (log space) ===")
+    for k, v in results.items():
+        print(f"{k}: MAE={v['mae']:.4f}, RMSE={v['rmse']:.4f}, R²={v['r2']:.4f}")
+        print(f"  → Best Params: {v['best_params']}")
 
 
 if __name__ == "__main__":

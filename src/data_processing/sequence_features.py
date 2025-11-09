@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
+# consider https://pypi.org/project/esm/
 import math
 
 STD = set("ACDEFGHIKLMNPQRSTVWY")

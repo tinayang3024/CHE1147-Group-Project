@@ -6,6 +6,7 @@ FIG_DIR = os.path.join(ROOT_DIR, "figs")
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 RAW_DIR = os.path.join(DATA_DIR, "raw")
 PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
+BRENDA_FILEPATH = os.path.join(DATA_DIR, "brenda_2025_1.txt")
 
 # make sure folders exist
 for _d in [FIG_DIR, DATA_DIR, RAW_DIR, PROCESSED_DIR]:
@@ -22,5 +23,7 @@ FP_VAR_THRESHOLD = 0.01
 USE_PCA_FOR_FP = True
 FP_PCA_N_COMPONENTS = 200
 RANDOM_STATE = 42
+
+DROP_MISSING_THRESHOLD = 0.6
 
 TARGET_COLS = ["kcat_km", "kcat_value", "km_value"]

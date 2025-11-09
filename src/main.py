@@ -16,6 +16,7 @@ from src.utils.io_utils import (
 )
 from src.viz.plots import plot_corr_heatmap, plot_pca_explained_variance
 from src.data_processing.brenda_features import expand_enzyme_ec
+from src.data_processing.brenda_features import add_brenda_features
 
 def main():
     # 1) load + basic cleaning
@@ -38,10 +39,10 @@ def main():
     print("[main] adding PubChem-based features...")
     df = add_pubchem_features(df)
     # print("[main] adding BRENDA-based features...")
-    # df = add_brenda_features(df)
+    # df = add_brenda_features(df) # not allowed according to TA!!!!!
     print("[main] expanding enzyme EC numbers...")
     df = expand_enzyme_ec(df)
-
+    
     # 5) outlier removal
     print("[main] applying outlier removal strategy...")
     df_clean = apply_outlier_strategy(df)
@@ -52,9 +53,9 @@ def main():
 
     # 7) save cleaned data so we don’t run this again
     print("[main] saving processed data and features...")
-    save_parquet(df_clean, "enzyme_clean.parquet")
-    save_features_npz(X, y, meta, fname="enzyme_features.npz")
-    save_meta(meta)
+    save_parquet(df_clean, "enzyme_clean_mod.parquet")
+    save_features_npz(X, y, meta, fname="enzyme_features_mod.npz")
+    save_meta(meta, fname="feature_meta_mod.json")
 
     # 8) (optional) quick plots
     print("[main] generating diagnostic plots...")

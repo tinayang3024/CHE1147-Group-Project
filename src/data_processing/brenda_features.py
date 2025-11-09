@@ -1,93 +1,233 @@
 """
 brenda_features.py
 --------------------------------
-Feature enrichment using BRENDA metadata joined via brenda_id.
-This script fetches enzyme-related biochemical context (e.g., EC number, cofactors)
-from a provided BRENDA metadata table and merges it with the main dataset.
+Feature enrichment using BRENDA metadata via local BRENDA TXT
+parsed by BRENDApyrser.
+
+This version assumes:
+- `enzyme_ecs` column is a LIST of EC strings per row, e.g.
+    ["2.7.1.40", "3.2.1.17"]
+- BRENDA TXT is already downloaded and path is set in src.config.BRENDA_FILEPATH
 """
 
 import os
 import pandas as pd
-from src.utils.io_utils import load_parquet
-from src.config import PROCESSED_DIR, DATA_DIR
 import numpy as np
 
+from src.utils.io_utils import load_parquet
+from src.config import PROCESSED_DIR, DATA_DIR, BRENDA_FILEPATH
+from brendapyrser import BRENDA
+import math
+
+# ---------------------------------------------------------
+# 1. (kept) EC expansion helper
+#    NOTE: if your main pipeline already calls this, you
+#    can skip calling it in add_brenda_features.
+# ---------------------------------------------------------
 def expand_enzyme_ec(df: pd.DataFrame, col: str = "enzyme_ecs") -> pd.DataFrame:
     """
-    Expand EC numbers into 4 categorical columns.
-    Safely handles missing/invalid EC entries.
+    Original version assumes `col` is a string EC like "2.7.1.40".
+    If you're now storing lists, call this BEFORE converting
+    to lists, or adapt to pick the first EC.
     """
-    # Split EC string into 4 levels
-    ec_split = df[col].astype(str).str.split('.', expand=True)
+    ec_split = df[col].astype(str).str.split(".", expand=True)
     ec_split = ec_split.iloc[:, :4].fillna(np.nan)
-
-    # Rename columns
     ec_split.columns = [f"{col}_level{i+1}" for i in range(4)]
-
-    # Convert to numeric categories (Int32 to allow NaN)
     for c in ec_split.columns:
         ec_split[c] = pd.to_numeric(ec_split[c], errors="coerce").astype("Int32")
-
-    # Concatenate with original DataFrame
-    df_out = pd.concat([df, ec_split], axis=1)
-    return df_out
+    return pd.concat([df, ec_split], axis=1)
 
 
-def add_brenda_features(df: pd.DataFrame, brenda_meta_path: str = None) -> pd.DataFrame:
+# ---------------------------------------------------------
+# 2. extract features from a single BRENDA reaction
+# ---------------------------------------------------------
+def _agg_log(vals):
+    if not vals:
+        return (0.0, 0.0, 0.0)
+    logs = [math.log10(v) for v in vals if v > 0]
+    return (min(logs), max(logs), sum(logs) / len(logs))
+
+def _extract_reaction_features(rxn) -> dict:
     """
-    Enrich enzyme dataset with metadata from BRENDA.
+    Extract numeric kinetic features from a BRENDApyrser reaction object.
+
+    - Aggregates min / max / mean KM and Kcat.
+    - Applies log10 transform to reduce skew (ignores nonpositive values).
+    """
+    if rxn is None:
+        return {
+            "brenda_has_reaction": 0,
+            "brenda_km_min": 0.0,
+            "brenda_km_max": 0.0,
+            "brenda_km_mean": 0.0,
+            "brenda_kcat_min": 0.0,
+            "brenda_kcat_max": 0.0,
+            "brenda_kcat_mean": 0.0,
+        }
+
+    km_vals, kcat_vals = [], []
+
+    # --- collect KM ---
+    for entries in (getattr(rxn, "KMvalues", {}) or {}).values():
+        for e in entries or []:
+            v = e.get("value")
+            if v is not None:
+                try:
+                    v = float(v)
+                    if v > 0:
+                        km_vals.append(v)
+                except (TypeError, ValueError):
+                    continue
+
+    # --- collect Kcat ---
+    for entries in (getattr(rxn, "Kcatvalues", {}) or {}).values():
+        for e in entries or []:
+            v = e.get("value")
+            if v is not None:
+                try:
+                    v = float(v)
+                    if v > 0:
+                        kcat_vals.append(v)
+                except (TypeError, ValueError):
+                    continue
+
+    km_min, km_max, km_mean = _agg_log(km_vals)
+    kcat_min, kcat_max, kcat_mean = _agg_log(kcat_vals)
+    # print({
+    #     "brenda_has_reaction": 1,
+    #     "brenda_km_min": km_min,
+    #     "brenda_km_max": km_max,
+    #     "brenda_km_mean": km_mean,
+    #     "brenda_kcat_min": kcat_min,
+    #     "brenda_kcat_max": kcat_max,
+    #     "brenda_kcat_mean": kcat_mean,
+    # })
+    # exit()
+    return {
+        "brenda_has_reaction": 1,
+        "brenda_km_min": km_min,
+        "brenda_km_max": km_max,
+        "brenda_km_mean": km_mean,
+        "brenda_kcat_min": kcat_min,
+        "brenda_kcat_max": kcat_max,
+        "brenda_kcat_mean": kcat_mean,
+    }
+
+
+# ---------------------------------------------------------
+# 3. Main enrichment function
+# ---------------------------------------------------------
+def add_brenda_features(
+    df: pd.DataFrame,
+    ec_col: str = "enzyme_ecs",
+) -> pd.DataFrame:
+    """
+    Enrich the dataframe with BRENDA-derived features using BRENDApyrser.
+
     Parameters
     ----------
     df : pd.DataFrame
-        Main enzyme dataset (must contain 'brenda_id').
-    brenda_meta_path : str, optional
-        Path to CSV or Parquet file containing BRENDA metadata.
-        Expected columns: ['brenda_id', 'enzyme_ecs', 'cofactors', 'reaction_type', 'organism']
+        Your main training dataframe, must contain `enzyme_ecs`
+        where each cell is a LIST of EC strings.
+    ec_col : str
+        Name of the EC column in df.
+
     Returns
     -------
     pd.DataFrame
-        Enriched dataset with new BRENDA-based features.
+        df with new columns:
+            - brenda_has_reaction
+            - brenda_n_substrates
+            - brenda_n_products
     """
-    if "brenda_id" not in df.columns:
-        raise ValueError("brenda_id column is required in the input DataFrame.")
+    if ec_col not in df.columns:
+        raise ValueError(f"{ec_col} column is required in the input DataFrame.")
 
-    # Default metadata file path
-    if brenda_meta_path is None:
-        brenda_meta_path = os.path.join(DATA_DIR, "external", "brenda_metadata.csv")
+    if not os.path.exists(BRENDA_FILEPATH):
+        raise FileNotFoundError(
+            f"BRENDA TXT not found at {BRENDA_FILEPATH}. Please download it from BRENDA website."
+        )
 
-    if not os.path.exists(brenda_meta_path):
-        raise FileNotFoundError(f"BRENDA metadata not found at {brenda_meta_path}")
+    print(f"[BRENDA] Parsing BRENDA from {BRENDA_FILEPATH} ...")
+    brenda = BRENDA(BRENDA_FILEPATH)
 
-    print(f"[BRENDA] Loading metadata from {brenda_meta_path}")
-    brenda_meta = pd.read_csv(brenda_meta_path)
+    # cache per EC to avoid re-querying
+    ec_cache: dict[str, dict] = {}
+    brenda_rows: list[dict] = []
 
-    # Clean and select relevant columns
-    expected_cols = ["brenda_id", "enzyme_ecs", "cofactors", "reaction_type", "organism"]
-    brenda_meta = brenda_meta[[c for c in expected_cols if c in brenda_meta.columns]]
+    for ecs in df[ec_col]:
+        # print(f"[BRENDA] Iterating in {ecs}...")
+        # normalize to list
+        if isinstance(ecs, list) or isinstance(ecs, object):
+            # print(f"[BRENDA] ecs is a list")
+            ec_list = ecs
+        elif isinstance(ecs, str) and ecs.strip() not in ("", "None", "nan", "NaN", "null"):
+            # print(f"[BRENDA] ecs is a str")
+            # allow semi-colon / comma separated strings just in case
+            if ";" in ecs:
+                ec_list = [e.strip() for e in ecs.split(";") if e.strip()]
+            elif "," in ecs:
+                ec_list = [e.strip() for e in ecs.split(",") if e.strip()]
+            else:
+                ec_list = [ecs.strip()]
+        else:
+            # print(f"[BRENDA] ecs is unknown")
+            ec_list = []
 
-    # Drop duplicates, keep most recent or complete entry
-    brenda_meta = brenda_meta.drop_duplicates(subset=["brenda_id"])
+        # if no ECs for this row
+        if ec_list is None or len(ec_list) == 0:
+        # if not ec_list:
+            brenda_rows.append(_extract_reaction_features(None))
+            continue
 
-    # Merge with main DataFrame
-    df_merged = df.merge(brenda_meta, on="brenda_id", how="left")
+        # collect features from ALL ECs in this row
+        per_ec_feats = []
+        for ec in ec_list:
+            if ec in ec_cache:
+                feats = ec_cache[ec]
+            else:
+                try:
+                    print(f"[BRENDA] Fetching EC: {ec}")
+                    rxn = brenda.reactions.get_by_id(ec)
+                except Exception as e:
+                    print(f"[BRENDA] Fetching failed for {ec}: {e}")
+                    rxn = None
 
-    # Optional: One-hot encode EC number and cofactor presence
-    if "enzyme_ecs" in df_merged.columns:
-        df_merged["EC_prefix"] = df_merged["enzyme_ecs"].astype(str).str.split(".").str[0]
-        df_merged = pd.get_dummies(df_merged, columns=["EC_prefix"], prefix="EC", dummy_na=True)
+                feats = _extract_reaction_features(rxn)
+                ec_cache[ec] = feats
 
-    if "cofactors" in df_merged.columns:
-        df_merged["has_cofactor"] = df_merged["cofactors"].notna().astype(int)
+            per_ec_feats.append(feats)
 
-    print(f"[BRENDA] Added {df_merged.shape[1] - df.shape[1]} new feature columns.")
-    return df_merged
+        # aggregate features across ECs for THIS ROW
+        # strategy: take max – so if any EC has reaction/substrates, we keep it
+        row_feats = {
+            "brenda_has_reaction": max(f["brenda_has_reaction"] for f in per_ec_feats),
+            "brenda_km_min": min(f["brenda_km_min"] for f in per_ec_feats),
+            "brenda_km_max": max(f["brenda_km_max"] for f in per_ec_feats),
+            "brenda_km_mean": sum(f["brenda_km_mean"] for f in per_ec_feats)/len(per_ec_feats),
+            "brenda_kcat_min": min(f["brenda_kcat_min"] for f in per_ec_feats),
+            "brenda_kcat_max": max(f["brenda_kcat_max"] for f in per_ec_feats),
+            "brenda_kcat_mean": sum(f["brenda_kcat_mean"] for f in per_ec_feats)/len(per_ec_feats),
+        }
+        brenda_rows.append(row_feats)
+
+    brenda_df = pd.DataFrame(brenda_rows, index=df.index)
+
+    df_out = pd.concat([df, brenda_df], axis=1)
+
+    print(f"[BRENDA] Added {df_out.shape[1] - df.shape[1]} new columns from BRENDA.")
+    return df_out
 
 
+# # ---------------------------------------------------------
+# # 4. optional entrypoint
+# # ---------------------------------------------------------
 # if __name__ == "__main__":
-#     # Example standalone usage
-#     fname = "enzyme_clean.parquet"
-#     df = load_parquet(fname)
-#     df_enriched = add_brenda_features(df)
-#     out_path = os.path.join(PROCESSED_DIR, "enzyme_enriched.parquet")
+#     in_path = os.path.join(PROCESSED_DIR, "train.parquet")
+#     df = load_parquet(in_path)
+
+#     df_enriched = add_brenda_features(df, ec_col="enzyme_ecs")
+
+#     out_path = os.path.join(PROCESSED_DIR, "train_with_brenda.parquet")
 #     df_enriched.to_parquet(out_path, index=False)
-#     print(f"[BRENDA] Enriched data saved → {out_path}")
+#     print(f"[BRENDA] Saved enriched dataset to {out_path}")

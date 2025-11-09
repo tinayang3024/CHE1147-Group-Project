@@ -7,7 +7,7 @@ import requests
 import pandas as pd
 import pyarrow.parquet as pq
 
-from src.config import DATA_URL, TARGET_COLS
+from src.config import DATA_URL, TARGET_COLS, DROP_MISSING_THRESHOLD
 
 
 def extract_first_int(val):
@@ -64,7 +64,7 @@ def basic_clean(df: pd.DataFrame) -> pd.DataFrame:
     # drop columns with > 60% missing and print dropped cols
     # note: adjusted from 50% to 60% to keep enzyme_ecs which is important for brenda features
     missing_ratio = df.isnull().mean()
-    dropped_cols = missing_ratio[missing_ratio > 0.6].index.tolist()
+    dropped_cols = missing_ratio[missing_ratio > DROP_MISSING_THRESHOLD].index.tolist()
     if dropped_cols:
         print(f"[Load & basic clean] Dropping columns with >60% missing: {dropped_cols}")
         df = df.drop(columns=dropped_cols)

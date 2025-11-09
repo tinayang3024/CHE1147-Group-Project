@@ -9,6 +9,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from scipy.stats import loguniform
 import joblib
 from src.utils.io_utils import load_parquet
+from src.config import DROP_MISSING_THRESHOLD
 
 OUTPUT_DIR = "models"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -58,7 +59,7 @@ def tune_and_train(X, y, target_name, random_state=42):
     #     "reg_lambda": loguniform(0.001, 0.1, 10),
     #     "min_child_weight": [1],
     # }
-    
+
     # log 9
     param_grid = {
         "n_estimators": [800, 1000, 1200],
@@ -135,7 +136,7 @@ def main():
 
     # drop columns with too many missing values
     missing_ratio = df.isnull().mean()
-    df = df.drop(columns=missing_ratio[missing_ratio > 0.5].index)
+    df = df.drop(columns=missing_ratio[missing_ratio > DROP_MISSING_THRESHOLD].index)
 
     X, targets = prepare_features_from_df(df)
 
