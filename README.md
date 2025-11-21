@@ -190,7 +190,3 @@ These contain:
 * Processed datasets and model artifacts are reproducible on any machine
 
 ---
-
-## 📮 **Contact & Contribution**
-
-For questions, contributions, or suggestions, feel free to open an Issue or Pull Request in the repository.
