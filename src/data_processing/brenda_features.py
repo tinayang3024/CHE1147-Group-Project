@@ -1,15 +1,3 @@
-"""
-brenda_features.py
---------------------------------
-Feature enrichment using BRENDA metadata via local BRENDA TXT
-parsed by BRENDApyrser.
-
-This version assumes:
-- `enzyme_ecs` column is a LIST of EC strings per row, e.g.
-    ["2.7.1.40", "3.2.1.17"]
-- BRENDA TXT is already downloaded and path is set in src.config.BRENDA_FILEPATH
-"""
-
 import os
 import pandas as pd
 import numpy as np
@@ -38,6 +26,9 @@ def expand_enzyme_ec(df: pd.DataFrame, col: str = "enzyme_ecs") -> pd.DataFrame:
     return pd.concat([df, ec_split], axis=1)
 
 
+# Note:
+# The code segments below were not used during model training after consulting with the course TA
+# as feeding BRENDA kcat and km (even at different environmental conditions) to the model is considered "cheating"
 # ---------------------------------------------------------
 # 2. extract features from a single BRENDA reaction
 # ---------------------------------------------------------
@@ -93,16 +84,6 @@ def _extract_reaction_features(rxn) -> dict:
 
     km_min, km_max, km_mean = _agg_log(km_vals)
     kcat_min, kcat_max, kcat_mean = _agg_log(kcat_vals)
-    # print({
-    #     "brenda_has_reaction": 1,
-    #     "brenda_km_min": km_min,
-    #     "brenda_km_max": km_max,
-    #     "brenda_km_mean": km_mean,
-    #     "brenda_kcat_min": kcat_min,
-    #     "brenda_kcat_max": kcat_max,
-    #     "brenda_kcat_mean": kcat_mean,
-    # })
-    # exit()
     return {
         "brenda_has_reaction": 1,
         "brenda_km_min": km_min,
@@ -156,14 +137,10 @@ def add_brenda_features(
     brenda_rows: list[dict] = []
 
     for ecs in df[ec_col]:
-        # print(f"[BRENDA] Iterating in {ecs}...")
         # normalize to list
         if isinstance(ecs, list) or isinstance(ecs, object):
-            # print(f"[BRENDA] ecs is a list")
             ec_list = ecs
         elif isinstance(ecs, str) and ecs.strip() not in ("", "None", "nan", "NaN", "null"):
-            # print(f"[BRENDA] ecs is a str")
-            # allow semi-colon / comma separated strings just in case
             if ";" in ecs:
                 ec_list = [e.strip() for e in ecs.split(";") if e.strip()]
             elif "," in ecs:
@@ -171,7 +148,6 @@ def add_brenda_features(
             else:
                 ec_list = [ecs.strip()]
         else:
-            # print(f"[BRENDA] ecs is unknown")
             ec_list = []
 
         # if no ECs for this row
@@ -217,17 +193,3 @@ def add_brenda_features(
 
     print(f"[BRENDA] Added {df_out.shape[1] - df.shape[1]} new columns from BRENDA.")
     return df_out
-
-
-# # ---------------------------------------------------------
-# # 4. optional entrypoint
-# # ---------------------------------------------------------
-# if __name__ == "__main__":
-#     in_path = os.path.join(PROCESSED_DIR, "train.parquet")
-#     df = load_parquet(in_path)
-
-#     df_enriched = add_brenda_features(df, ec_col="enzyme_ecs")
-
-#     out_path = os.path.join(PROCESSED_DIR, "train_with_brenda.parquet")
-#     df_enriched.to_parquet(out_path, index=False)
-#     print(f"[BRENDA] Saved enriched dataset to {out_path}")

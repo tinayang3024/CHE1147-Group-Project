@@ -6,7 +6,7 @@ from rdkit.Chem import Descriptors, DataStructs, rdFingerprintGenerator
 RDLogger.DisableLog("rdApp.*")
 
 FP_SIZE = 256
-# FP_SIZE = 2048
+# FP_SIZE = 2048 # too large for the model
 morgan_gen = rdFingerprintGenerator.GetMorganGenerator(radius=2, fpSize=FP_SIZE)
 
 
@@ -77,7 +77,7 @@ def add_smiles_features(df: pd.DataFrame) -> pd.DataFrame:
     df["mol"] = df.get("smiles", pd.Series(index=df.index)).apply(smiles_to_mol)
 
     desc_df = df["mol"].apply(mol_descriptors)
-    # not applying log-scaling for now as models can handle raw values
+    # Note: not applying log-scaling for now as models can handle raw values
     # # log-scaling only for heavy-tailed ones
     # desc_df["desc_log_MW"] = np.log10(desc_df["desc_MW"])
     # desc_df["desc_log_TPSA"] = np.log1p(desc_df["desc_TPSA"])

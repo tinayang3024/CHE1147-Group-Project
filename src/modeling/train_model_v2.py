@@ -140,6 +140,7 @@ def main():
 
     X, targets = prepare_features_from_df(df)
 
+    # Uncomment to peak at the dataset
     # print("X feature names:", X.columns.tolist())
     # print("X shape:", X.shape)
     # print("df feature names:", df.columns.tolist())

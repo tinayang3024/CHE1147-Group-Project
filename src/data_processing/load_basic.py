@@ -62,7 +62,7 @@ def basic_clean(df: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(subset=["kcat_value", "km_value"]).reset_index(drop=True)
 
     # drop columns with > 60% missing and print dropped cols
-    # note: adjusted from 50% to 60% to keep enzyme_ecs which is important for brenda features
+    # Note: adjusted from 50% to 60% to keep enzyme_ecs which is important for brenda features
     missing_ratio = df.isnull().mean()
     dropped_cols = missing_ratio[missing_ratio > DROP_MISSING_THRESHOLD].index.tolist()
     if dropped_cols:

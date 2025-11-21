@@ -1,11 +1,9 @@
 import re
 from typing import Tuple, Dict, Any
-
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
-# consider https://pypi.org/project/esm/
 import math
 
 STD = set("ACDEFGHIKLMNPQRSTVWY")
@@ -17,7 +15,6 @@ REPLACEMENTS = {
     "J": "L",
 }
 paren_pat = re.compile(r"\([^)]*\)")
-
 
 HYDROPHOBIC = set("AVILMFWY")
 POLAR = set("STNQ")
@@ -39,27 +36,6 @@ def normalize_sequence(seq: str) -> Tuple[str, float, int]:
     s_clean = "".join(ch for ch in s if ch in STD)
     unknown_frac = (1 - len(s_clean) / orig_len) if orig_len else np.nan
     return s_clean, unknown_frac, orig_len
-
-
-# def compute_protein_features(seq: str) -> Dict[str, Any]:
-#     s_clean, unknown_frac, orig_len = normalize_sequence(seq)
-#     if not s_clean or orig_len < 10:
-#         return {}
-#     pa = ProteinAnalysis(s_clean)
-#     feats = {
-#         "sequence_length": orig_len,
-#         "clean_length": len(s_clean),
-#         "unknown_frac": unknown_frac,
-#         "aromaticity": pa.aromaticity(),
-#         "instability_index": pa.instability_index(),
-#         "isoelectric_point": pa.isoelectric_point(),
-#         "gravy": pa.gravy(),
-#     }
-#     h, t, e = pa.secondary_structure_fraction()
-#     feats.update({"frac_helix": h, "frac_turn": t, "frac_sheet": e})
-#     for aa, frac in pa.amino_acids_percent.items():
-#         feats[f"aa_{aa}"] = frac
-#     return feats
 
 def compute_protein_features(seq: str) -> Dict[str, Any]:
     # your normalize_sequence(...) assumed
@@ -130,18 +106,6 @@ def compute_protein_features(seq: str) -> Dict[str, Any]:
             runs += run_len
         i = j
     feats["low_complexity_frac"] = runs / len(s_clean)
-
-    # OPTIONAL: dipeptides (commented to avoid 400 extra cols)
-    # dipeptides = {f"di_{a}{b}": 0.0 for a in "ACDEFGHIKLMNPQRSTVWY" for b in "ACDEFGHIKLMNPQRSTVWY"}
-    # for i in range(len(s_clean) - 1):
-    #     di = s_clean[i:i+2]
-    #     if di in dipeptides:
-    #         dipeptides[f"di_{di}"] += 1
-    # # normalize
-    # total_di = max(len(s_clean) - 1, 1)
-    # for k in dipeptides:
-    #     dipeptides[k] /= total_di
-    # feats.update(dipeptides)
 
     return feats
 

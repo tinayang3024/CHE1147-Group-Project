@@ -152,24 +152,11 @@ def main():
 
     X, targets = prepare_features_from_df(df)
 
+    # Uncomment to peak at the dataset
     # print("X feature names:", X.columns.tolist())
     # print("X shape:", X.shape)
     # print("df feature names:", df.columns.tolist())
 
-    # print("enzyme_ec examples:", df['enzyme_ec'].head().tolist())
-
-    # print("brenda_id examples:", df['brenda_id'].head(50).tolist())
-    # print("cid examples:", df['cid'].head().tolist())
-
-    # peak into ncbi, pdb, uniprot
-    # print("ncbi examples:", df['ncbi'].head(50).tolist())
-    # print("pdb examples:", df['pdb'].head(50).tolist())
-    # print("uniprot examples:", df['uniprot'].head(50).tolist())
-
-    # print("df head:\n", df.head(10))
-    # print("df cid and brenda_id:\n", df[['cid', 'brenda_id']].head(100))
-    # print("df cid types:\n", df['cid'].dtype)
-    # print("df brenda_id types:\n", df['brenda_id'].dtype)
 
     results = {}
     for target_name, y in targets.items():
