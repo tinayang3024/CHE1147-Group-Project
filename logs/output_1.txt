@@ -1,0 +1,7 @@
+=== Loading cleaned dataset ===
+[IO] loaded DataFrame ← /Users/yang/Documents/grad/che1147/CHE1147-Group-Project/data/processed/enzyme_clean.parquet shape=(162850, 2109)
+[Feature prep] X shape=(162850, 2087), targets=['kcat_value', 'km_value']
+
+=== Tuning & Training: kcat_value ===
+[kcat_value] Running parameter search...
+Fitting 3 folds for each of 15 candidates, totalling 45 fits

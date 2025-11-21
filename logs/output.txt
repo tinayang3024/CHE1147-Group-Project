@@ -1,0 +1,23 @@
+=== Loading cleaned dataset ===
+[IO] loaded DataFrame ← /Users/yang/Documents/grad/che1147/CHE1147-Group-Project/data/processed/enzyme_clean.parquet shape=(162850, 2109)
+Loaded DataFrame shape: (162850, 2109)
+=== Preparing features and targets ===
+[Feature prep] X shape=(162850, 2087), targets=['kcat_value', 'km_value']
+
+=== Training model for: kcat_value ===
+[kcat_value] Train shape: (146565, 2087), Test shape: (16285, 2087)
+
+[kcat_value] Evaluation (log space):
+MAE: 1.0322 | RMSE: 1.3800 | R²: 0.3574
+[Saved model] → models/xgb_kcat_value.joblib
+
+=== Training model for: km_value ===
+[km_value] Train shape: (146565, 2087), Test shape: (16285, 2087)
+
+[km_value] Evaluation (log space):
+MAE: 0.8409 | RMSE: 1.1229 | R²: 0.4356
+[Saved model] → models/xgb_km_value.joblib
+
+=== Training Summary (log space) ===
+kcat_value: MAE=1.0322, RMSE=1.3800, R²=0.3574
+km_value: MAE=0.8409, RMSE=1.1229, R²=0.4356
