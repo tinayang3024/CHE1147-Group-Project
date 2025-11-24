@@ -49,7 +49,7 @@ def tune_and_train(X, y, target_name, random_state=42):
     #     "min_child_weight": [1],
     # }
 
-    # log 8
+    # hyperparameter set for log 8
     # param_grid = {
     #     "n_estimators": [700, 1000, 1500],
     #     "learning_rate": [0.04, 0.05, 0.06],
@@ -60,7 +60,7 @@ def tune_and_train(X, y, target_name, random_state=42):
     #     "min_child_weight": [1],
     # }
     
-    # log 9
+    # hyperparameter set for log 9
     # param_grid = {
     #     "n_estimators": [800, 1000, 1200],
     #     "learning_rate": [0.02, 0.03, 0.04],
@@ -71,7 +71,7 @@ def tune_and_train(X, y, target_name, random_state=42):
     #     "min_child_weight": [1],
     # }
 
-    # log 10
+    # hyperparameter set for log 10 (best performance)
     param_grid = {
         "n_estimators": [1000],
         "learning_rate": [0.04],

@@ -19,9 +19,6 @@ def domain_outlier_mask(df: pd.DataFrame) -> pd.Series:
         m |= df["unknown_frac"] > 0.2
     return m
 
-
-# --- helper to get log-IQR mask reused in several places ---
-
 def _log_values(s: pd.Series) -> pd.Series:
     s = pd.to_numeric(s, errors="coerce")
     s = s[(s > 0) & np.isfinite(s)]

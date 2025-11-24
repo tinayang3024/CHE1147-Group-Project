@@ -22,7 +22,6 @@ REMOVING_COLS = [
 ]
 
 def prepare_features_from_df(df: pd.DataFrame):
-    # try to skip fingerprints for speed
     X = df.drop(columns=REMOVING_COLS, errors="ignore") \
           .drop(columns=[c for c in TARGET_COLS if c in df.columns], errors="ignore") \
           .select_dtypes(include=[np.number])

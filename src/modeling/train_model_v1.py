@@ -1,5 +1,4 @@
 import os, sys
-# Ensure src is in the path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 import numpy as np
@@ -14,7 +13,6 @@ from src.utils.io_utils import load_parquet  # uses rehydration logic
 OUTPUT_DIR = "models"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-# only predicting kcat_value and km_value for now as kcat_km is derived
 TARGET_COLS = ["kcat_value", "km_value"]
 REMOVING_COLS = [
     "kcat_km", "max_enzyme_similarity", "max_organism_similarity",

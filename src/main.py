@@ -1,5 +1,4 @@
 import os, sys
-# Ensure src is in the path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from src.data_processing.load_basic import load_and_basic_clean
@@ -38,7 +37,7 @@ def main():
     # 4.5) pubchem and brenda features 
     print("[main] adding PubChem-based features...")
     df = add_pubchem_features(df)
-    # print("[main] adding BRENDA-based features...")
+
     # df = add_brenda_features(df) # not allowed according to TA!!!!!
     print("[main] expanding enzyme EC numbers...")
     df = expand_enzyme_ec(df)
