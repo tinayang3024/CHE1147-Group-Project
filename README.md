@@ -85,12 +85,6 @@ This ensures the project is **fully reproducible** across machines.
 
 ## 🛠️ **Data Preprocessing Pipeline**
 
-Raw data must be placed into:
-
-```
-data/raw/
-```
-
 To generate all cleaned feature-rich datasets required for model training, run:
 
 ```bash
